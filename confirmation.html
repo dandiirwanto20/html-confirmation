@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konfirmasi Pembelian Pulsa</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f7f6;
+            margin: 0;
+            color: #333;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid #e0e0e0;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+        p {
+            color: #555;
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .loading {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .success-message {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .small-text {
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mohon Tunggu Sebentar...</h1>
+        <p id="status-message">Sedang memproses permintaan pulsa Anda. Mohon periksa WhatsApp Anda untuk notifikasi.</p>
+        <div class="loading" id="loading-spinner"></div>
+        <p class="small-text">Jangan tutup halaman ini sampai proses selesai.</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const phoneNumber = params.get('phone');
+            const pulseAmount = params.get('amount');
+            const chatId = params.get('chatId'); // ID chat WhatsApp pengguna
+
+            const statusMessage = document.getElementById('status-message');
+            const loadingSpinner = document.getElementById('loading-spinner');
+
+            // --- PENTING: Ganti dengan URL Webhook AKTUAL dari Alur Kerja KEDUA Activepieces Anda ---
+            // Ini adalah URL webhook yang Anda dapatkan dari Trigger "Catch Webhook" di alur kerja kedua.
+            const activepiecesWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/7DBd5nRb1IFlzS574m95Y"; 
+            // Contoh: "https://cloud.activepieces.com/api/v1/webhooks/e5f6g7h8-i9j0-k1l2-m3n4-o5p6q7r8s9t0";
+
+            if (!phoneNumber || !pulseAmount || !chatId) {
+                statusMessage.textContent = "Data transaksi tidak lengkap. Mohon hubungi layanan pelanggan.";
+                statusMessage.classList.add('error-message');
+                loadingSpinner.style.display = 'none';
+                return;
+            }
+
+            try {
+                // Melakukan panggilan API (fetch) ke webhook Activepieces Anda
+                const response = await fetch(activepiecesWebhookUrl, {
+                    method: 'POST', // Penting: Menggunakan POST
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ // Mengirim data sebagai JSON body
+                        phone: phoneNumber,
+                        amount: pulseAmount,
+                        chatId: chatId
+                    })
+                });
+
+                // Anda bisa memeriksa response.ok di sini, tetapi balasan WhatsApp akan dikirim dari Activepieces.
+                if (response.ok) {
+                    statusMessage.textContent = `Permintaan pulsa Rp. ${pulseAmount} untuk nomor ${phoneNumber} sedang diproses. Mohon tunggu notifikasi di WhatsApp Anda.`;
+                    statusMessage.classList.add('success-message');
+                } else {
+                    // Jika ada masalah dari webhook Activepieces (misal: 400, 500)
+                    const errorData = await response.json();
+                    console.error("Webhook call failed:", errorData);
+                    statusMessage.textContent = "Terjadi masalah saat memproses permintaan Anda. Mohon coba lagi nanti.";
+                    statusMessage.classList.add('error-message');
+                }
+                
+                loadingSpinner.style.display = 'none'; // Sembunyikan spinner setelah proses
+
+            } catch (error) {
+                console.error("Error triggering webhook:", error);
+                statusMessage.textContent = "Tidak dapat menghubungi server. Mohon periksa koneksi internet Anda atau coba lagi.";
+                statusMessage.classList.add('error-message');
+                loadingSpinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
